@@ -1,30 +1,12 @@
-"""
-JB SUAREZ Meme Calculator
---------------------------
-A simple Tkinter calculator. Every time you press "=", it plays a
-meme video (JB SUAREZ) using your system's default video player.
-
-SETUP:
-1. Put a video file named "jb_suarez.mp4" in the SAME FOLDER as this script.
-   (Any meme clip you have rights to use works — just name it jb_suarez.mp4,
-   or change VIDEO_FILENAME below to match your file.)
-2. Run: python jb_suarez_calculator.py
-
-Optional: set PLAY_ON_EVERY_EQUALS = False if you only want the meme to
-play for a specific result (e.g. only when 2 + 2 = 4).
-"""
-
 import os
 import sys
 import subprocess
 import tkinter as tk
 from tkinter import messagebox
 
-# ---------------- CONFIG ----------------
-VIDEO_FILENAME = "jb_suarez.mp4"          # video file to play
-PLAY_ON_EVERY_EQUALS = True               # True = play on every "=", False = only on TRIGGER_RESULT
-TRIGGER_RESULT = 4                        # used only if PLAY_ON_EVERY_EQUALS is False (e.g. 2+2=4)
-# -----------------------------------------
+VIDEO_FILENAME = "jb_suarez.mp4"         
+PLAY_ON_EVERY_EQUALS = False             
+TRIGGER_RESULT = 4                       
 
 
 def play_meme_video():
@@ -41,11 +23,15 @@ def play_meme_video():
 
     try:
         if sys.platform.startswith("win"):
-            os.startfile(video_path)  # Windows
+            os.startfile(video_path) 
         elif sys.platform == "darwin":
-            subprocess.Popen(["open", video_path])  # macOS
+            script = f'tell application "QuickTime Player"\n open POSIX file "{video_path}"\n play document 1\n activate\nend tell'
+            try:
+                subprocess.Popen(["osascript", "-e", script])
+            except Exception:
+                subprocess.Popen(["open", video_path])  
         else:
-            subprocess.Popen(["xdg-open", video_path])  # Linux
+            subprocess.Popen(["xdg-open", video_path])
     except Exception as e:
         messagebox.showerror("Playback error", f"Couldn't open video:\n{e}")
 
@@ -89,7 +75,6 @@ class Calculator(tk.Tk):
         ]
 
         for (text, row, col) in buttons:
-            # Default: digit/dot keys — mid-dark gray, white text
             color = "#2d2d2d"
             text_color = "#ffffff"
             hover_color = "#3d3d3d"
@@ -146,18 +131,21 @@ class Calculator(tk.Tk):
 
     def calculate(self):
         try:
-            # Only allow safe characters in the expression
+            raw_expr = self.expression
             allowed = set("0123456789.+-*/() ")
             if not all(c in allowed for c in self.expression):
                 raise ValueError("Invalid characters")
 
             result = eval(self.expression, {"__builtins__": {}}, {})
-            self.display_var.set(str(result))
-            self.expression = str(result)
 
-            # 🎬 Trigger the meme video
-            if PLAY_ON_EVERY_EQUALS or result == TRIGGER_RESULT:
+            clean_expr = raw_expr.replace(" ", "")
+            if PLAY_ON_EVERY_EQUALS or clean_expr == "2+2" or result == TRIGGER_RESULT:
+                self.expression = ""
+                self.display_var.set("0")
                 play_meme_video()
+            else:
+                self.display_var.set(str(result))
+                self.expression = str(result)
 
         except Exception:
             self.display_var.set("Error")
