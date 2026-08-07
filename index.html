@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CalcPro</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100dvh;
+      height: 100dvh;
+      display: grid;
+      place-items: center;
+      background: #0a1a0f;
+      font-family: system-ui, sans-serif;
+    }
+
+    /* ── Calculator Shell ── */
+    .calc {
+      background: #0f2318;
+      border: 1px solid #1a4d2e;
+      border-radius: 16px;
+      padding: 20px;
+      width: 320px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+    }
+
+    .display {
+      background: #061209;
+      border: 1px solid #1a4d2e;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    .hist {
+      font-size: 12px;
+      color: #2d6a3f;
+      min-height: 16px;
+    }
+
+    .num {
+      font-size: 34px;
+      font-weight: 700;
+      color: #a3ffb0;
+      word-break: break-all;
+    }
+
+    /* ── Button Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    button {
+      height: 60px;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.1s;
+    }
+
+    .n             { background: #122b1a; color: #d4ffd9; }
+    .n:hover       { background: #1a3d24; }
+
+    .op            { background: #1a3d24; color: #4ade80; }
+    .op:hover      { background: #235230; }
+
+    .cl            { background: #1a2e12; color: #86efac; }
+    .cl:hover      { background: #243d18; }
+
+    .eq {
+      background: linear-gradient(135deg, #16a34a, #4ade80);
+      color: #052e16;
+      font-size: 22px;
+      box-shadow: 0 4px 16px rgba(74, 222, 128, 0.3);
+    }
+    .eq:hover      { filter: brightness(1.1); }
+
+    .span2         { grid-column: span 2; }
+
+    /* ── Overlay / Paywall ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      z-index: 10;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: #0f2318;
+      border: 1px solid #1a4d2e;
+      border-radius: 20px;
+      padding: 28px 24px;
+      width: min(400px, 100%);
+      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7);
+    }
+
+    .modal h2 {
+      text-align: center;
+      font-size: 20px;
+      color: #a3ffb0;
+      margin-bottom: 6px;
+    }
+
+    .modal p {
+      text-align: center;
+      font-size: 13px;
+      color: #4ade80;
+      margin-bottom: 4px;
+    }
+
+    .tag {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #86efac;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    /* ── Plan Cards ── */
+    .plans {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #122b1a;
+      border: 2px solid #1a4d2e;
+      border-radius: 10px;
+      padding: 14px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    label:has(input:checked) {
+      border-color: #4ade80;
+      background: rgba(74, 222, 128, 0.07);
+    }
+
+    input[type="radio"] {
+      display: none;
+    }
+
+    .dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid #2d6a3f;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    .dot::after {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      transform: scale(0);
+      transition: 0.15s;
+    }
+
+    label:has(input:checked) .dot        { border-color: #4ade80; }
+    label:has(input:checked) .dot::after { transform: scale(1); }
+
+    .pinfo  { flex: 1; }
+    .pname  { font-size: 13px; font-weight: 600; color: #d4ffd9; display: block; }
+    .pdesc  { font-size: 11px; color: #4ade80; margin-top: 2px; display: block; }
+    .pprice { font-size: 15px; font-weight: 700; color: #a3ffb0; font-family: monospace; }
+
+    /* ── Modal Buttons ── */
+    .actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-cancel {
+      flex: 1;
+      height: 44px;
+      border: 1px solid #1a4d2e;
+      border-radius: 10px;
+      background: #122b1a;
+      color: #86efac;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-cancel:hover { background: #1a3d24; }
+
+    .btn-sub {
+      flex: 1;
+      height: 44px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #16a34a, #4ade80);
+      color: #052e16;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-sub:hover { filter: brightness(1.1); }
+  </style>
+</head>
+<body>
+
+  <!-- ── Calculator ── -->
+  <div class="calc">
+    <div class="display">
+      <div class="hist" id="hist"></div>
+      <div class="num"  id="disp">0</div>
+    </div>
+
+    <div class="grid">
+      <button class="cl"           onclick="clr()">C</button>
+      <button class="op"           onclick="sign()">+/−</button>
+      <button class="op"           onclick="pct()">%</button>
+      <button class="op"           onclick="op('÷')">÷</button>
+
+      <button class="n"            onclick="dig('7')">7</button>
+      <button class="n"            onclick="dig('8')">8</button>
+      <button class="n"            onclick="dig('9')">9</button>
+      <button class="op"           onclick="op('×')">×</button>
+
+      <button class="n"            onclick="dig('4')">4</button>
+      <button class="n"            onclick="dig('5')">5</button>
+      <button class="n"            onclick="dig('6')">6</button>
+      <button class="op"           onclick="op('−')">−</button>
+
+      <button class="n"            onclick="dig('1')">1</button>
+      <button class="n"            onclick="dig('2')">2</button>
+      <button class="n"            onclick="dig('3')">3</button>
+      <button class="op"           onclick="op('+')">+</button>
+
+      <button class="n span2"      onclick="dig('0')">0</button>
+      <button class="n"            onclick="dec()">.</button>
+      <button class="eq"           onclick="eq()">=</button>
+    </div>
+  </div>
+
+  <!-- ── Paywall Overlay ── -->
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h2>🔒 Unlock Your Result</h2>
+      <p>Choose a subscription plan to reveal your calculator answer</p>
+      <p class="tag">(pili na hayop)</p>
+
+      <div class="plans">
+        <label>
+          <input type="radio" name="plan" value="monthly" checked />
+          <span class="dot"></span>
+          <span class="pinfo">
+            <span class="pname">Monthly</span>
+            <span class="pdesc">Billed every month</span>
+          </span>
+          <span class="pprice">₱499.99</span>
+        </label>
+
+        <label>
+          <input type="radio" name="plan" value="yearly" />
+          <span class="dot"></span>
+          <span class="pinfo">
+            <span class="pname">Yearly</span>
+            <span class="pdesc">Best value — save more</span>
+          </span>
+          <span class="pprice">₱4,999.99</span>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button class="btn-cancel" id="btnCancel">Cancel</button>
+        <button class="btn-sub"    id="btnSub">Subscribe Now</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let cur = '0', prev = null, oper = null, wait = false;
+
+    const overlay = document.getElementById('overlay');
+    const dispEl  = document.getElementById('disp');
+    const histEl  = document.getElementById('hist');
+
+    const jokes = [
+      'Transaction failed: Payment gateway rejected your sense of financial responsibility.',
+      'Error 402: Your wallet cried and filed a police report.',
+      'Payment declined. Your credit card has requested emotional support.',
+      'Wala kang pera. Alis na.',
+      'Your card was declined so hard it filed a restraining order.',
+      'Insufficient funds. Your bank left the chat.',
+    ];
+
+    function show(v) {
+      dispEl.textContent = v;
+      dispEl.style.fontSize = String(v).length > 10 ? '22px' : '34px';
+    }
+
+    function clr() {
+      cur = '0'; prev = null; oper = null; wait = false;
+      show('0');
+      histEl.textContent = '';
+    }
+
+    function dig(d) {
+      if (wait) { cur = d; wait = false; }
+      else cur = cur === '0' ? d : cur.length < 14 ? cur + d : cur;
+      show(cur);
+    }
+
+    function dec() {
+      if (wait) { cur = '0.'; wait = false; }
+      else if (!cur.includes('.')) cur += '.';
+      show(cur);
+    }
+
+    function sign() { cur = String(parseFloat(cur) * -1); show(cur); }
+    function pct()  { cur = String(parseFloat(cur) / 100); show(cur); }
+
+    function op(o) {
+      if (prev !== null && !wait) calc(false);
+      prev = parseFloat(cur);
+      oper = o;
+      wait = true;
+      histEl.textContent = prev + ' ' + o;
+    }
+
+    function calc(fin) {
+      if (prev === null || !oper) return;
+      const b = parseFloat(cur);
+      const results = { '+': prev + b, '−': prev - b, '×': prev * b, '÷': prev / b };
+      const r = results[oper];
+
+      if (fin) {
+        histEl.textContent = prev + ' ' + oper + ' ' + b + ' =';
+        overlay.classList.add('show');
+      } else {
+        cur = String(r); prev = r; oper = null; wait = true;
+        show(cur);
+      }
+    }
+
+    function eq() { calc(true); }
+
+    document.getElementById('btnCancel').addEventListener('click', () => {
+      overlay.classList.remove('show');
+      clr();
+    });
+
+    document.getElementById('btnSub').addEventListener('click', () => {
+      const plan  = document.querySelector('input[name="plan"]:checked').value;
+      const price = plan === 'monthly' ? '₱499.99' : '₱4,999.99';
+      const joke  = jokes[Math.floor(Math.random() * jokes.length)];
+      overlay.classList.remove('show');
+      clr();
+      setTimeout(() => alert('❌ Transaction Failed\n\n' + joke + '\n\n(Attempted: ' + price + ')'), 100);
+    });
+
+    document.addEventListener('keydown', e => {
+      if (overlay.classList.contains('show')) return;
+      if (e.key >= '0' && e.key <= '9') dig(e.key);
+      if (e.key === '.')                 dec();
+      if (e.key === '+')                 op('+');
+      if (e.key === '-')                 op('−');
+      if (e.key === '*')                 op('×');
+      if (e.key === '/') { e.preventDefault(); op('÷'); }
+      if (e.key === 'Enter' || e.key === '=') eq();
+      if (e.key === 'Escape' || e.key.toLowerCase() === 'c') clr();
+    });
+  </script>
+
+</body>
+</html>
